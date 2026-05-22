@@ -1,0 +1,71 @@
+version: "3.9"
+
+# Two persistent services (postgres + pgadmin) plus a one-shot pipeline runner.
+# All services share the same bridge network so they resolve each other by
+# service name (e.g. the pipeline container reaches postgres at host "postgres").
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: titanic_postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pipeline_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: titanic_pgadmin
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "8080:80"
+    networks:
+      - pipeline_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: titanic_pipeline
+    env_file: .env
+    environment:
+      # Override host so the pipeline container reaches postgres by service name
+      POSTGRES_HOST: postgres
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - pipeline_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Exit after the pipeline finishes; restart: no so it doesn't loop
+    restart: "no"
+
+networks:
+  pipeline_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
