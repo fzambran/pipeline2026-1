@@ -24,3 +24,4 @@ data/reports/pipeline_summary.*
 
 # Otros archivos
 .DS_Store
+export_summary.py
