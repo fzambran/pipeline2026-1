@@ -63,7 +63,7 @@ pipeline_net (bridge)
 ## Requisitos previos
 
 ### Opción A — Ejecución local (sin Docker para el pipeline)
-- Python 3.13+ y [uv](https://docs.astral.sh/uv/)
+- Python 3.14+ y [uv](https://docs.astral.sh/uv/)
 - Docker y Docker Compose (para postgres + pgadmin)
 
 ### Opción B — Ejecución 100% en contenedores
@@ -84,12 +84,12 @@ cp .env .env.local  # ajustar credenciales si se desea
 El archivo `.env` incluido tiene valores por defecto para desarrollo local:
 
 ```
-POSTGRES_HOST=localhost
+POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
 POSTGRES_DB=titanic
-POSTGRES_USER=pipeline
-POSTGRES_PASSWORD=pipeline123
-PGADMIN_DEFAULT_EMAIL=admin@pipeline.local
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=admin123
+PGADMIN_DEFAULT_EMAIL=admin@correo.com
 PGADMIN_DEFAULT_PASSWORD=admin123
 ```
 
@@ -242,6 +242,25 @@ CREATE TABLE IF NOT EXISTS passengers (
 
 ---
 
+## Exportar resumen del pipeline
+
+El script `export_summary.py` genera un resumen ejecutivo del pipeline en dos formatos:
+
+```bash
+uv run python export_summary.py
+```
+
+**Archivos generados en `data/reports/`:**
+
+| Archivo | Descripción |
+|---|---|
+| `pipeline_summary.docx` | Documento Word con tablas de archivos, descripción de etapas y comandos |
+| `pipeline_summary.txt` | Versión en texto plano del mismo resumen |
+
+Requiere la dependencia `python-docx` (incluida en `pyproject.toml`).
+
+---
+
 ## pgAdmin
 
 Acceder en [http://localhost:8080](http://localhost:8080) con las credenciales del `.env`.
@@ -262,7 +281,10 @@ pipeline/
 │   ├── raw/                        # datos originales (no modificar)
 │   ├── processed/                  # salida Stage 1
 │   ├── validated/                  # salida Stages 2 y 3
-│   └── reports/                    # reportes de validación
+│   └── reports/
+│       ├── validation_report.txt   # reporte de validación semántica
+│       ├── pipeline_summary.docx   # resumen ejecutivo (Word)
+│       └── pipeline_summary.txt    # resumen ejecutivo (texto plano)
 ├── logs/                           # logs de carga
 ├── sql/
 │   └── create_table.sql            # DDL de la tabla passengers
@@ -271,6 +293,7 @@ pipeline/
 │   ├── validate.py                 # Stage 2
 │   └── load.py                     # Stage 3
 ├── main.py                         # orquestador
+├── export_summary.py               # genera resumen en .docx y .txt
 ├── Dockerfile                      # imagen del pipeline
 ├── docker-compose.yml              # postgres + pgadmin + pipeline
 ├── pyproject.toml
